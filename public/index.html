@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Solar Investment Model: Live Decision Dashboard</title>
+  <meta name="description" content="Live comparison of Solar Energy as a Service and CapEx ownership for an FMCG manufacturing site.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%231F36C7'/><circle cx='50' cy='50' r='18' fill='%23ffffff'/></svg>">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Live verdict strip: the deck's arrow strip, now showing results as inputs change -->
+  <nav class="strip" aria-label="Decision flow">
+    <div class="chev first" id="chev-inputs"><span class="chev-k">Inputs</span><span class="chev-v" id="sv-inputs">Case base</span></div>
+    <div class="chev" id="chev-money"><span class="chev-k">Money</span><span class="chev-v" id="sv-money"></span></div>
+    <div class="chev" id="chev-stress"><span class="chev-k">Stress test</span><span class="chev-v" id="sv-stress"></span></div>
+    <div class="chev" id="chev-tip"><span class="chev-k">Closest tipping point</span><span class="chev-v" id="sv-tip"></span></div>
+    <div class="chev" id="chev-risk"><span class="chev-k">Risk-adjusted score</span><span class="chev-v" id="sv-risk"></span></div>
+    <div class="chev last" id="chev-rec"><span class="chev-k">Recommendation</span><span class="chev-v" id="sv-rec"></span></div>
+  </nav>
+
+  <header class="titlebar">
+    <div class="title-block">
+      <h1>Own the solar plant or buy solar as a service?</h1>
+      <p class="sub">Live model for the 8 MW on-site plant. Change any input and every number, chart and the recommendation update at once.</p>
+    </div>
+    <div class="actions">
+      <div class="presets" role="group" aria-label="Scenarios">
+        <button class="chip active" data-preset="base">Case base</button>
+        <button class="chip" data-preset="cheapCapital">Capital at 10%</button>
+        <button class="chip" data-preset="lowOutput">Output 80%</button>
+        <button class="chip" data-preset="costRise">B costs rise 2.5%</button>
+        <button class="chip" data-preset="demandDrop">Demand falls 60%</button>
+      </div>
+      <button class="btn" id="btn-toggle" aria-pressed="false">Hide inputs</button>
+      <button class="btn" id="btn-link">Copy link</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="controls" id="controls" aria-label="Inputs">
+      <div class="controls-scroll" id="controls-body"></div>
+      <button class="btn reset" id="btn-reset">Reset to case values</button>
+    </aside>
+
+    <section class="main">
+      <!-- Key numbers -->
+      <div class="kpis">
+        <div class="kpi a">
+          <span class="kpi-l">Option A value (NPV)</span><span class="kpi-v" id="k-npvA"></span><span class="kpi-s" id="k-npvA-s"></span>
+          <span class="spark" id="sp-a" aria-hidden="true"></span>
+        </div>
+        <div class="kpi b">
+          <span class="kpi-l">Option B value (NPV)</span><span class="kpi-v" id="k-npvB"></span><span class="kpi-s" id="k-npvB-s"></span>
+          <span class="spark" id="sp-b" aria-hidden="true"></span>
+        </div>
+        <div class="kpi gap">
+          <span class="kpi-l">Gap between options</span><span class="kpi-v" id="k-gap"></span><span class="kpi-s" id="k-gap-s"></span>
+          <div class="kbar" aria-hidden="true"><div class="kbar-fill" id="kb-gap"></div></div>
+        </div>
+        <div class="kpi">
+          <span class="kpi-l">Year 1 cash saving</span><span class="kpi-v" id="k-y1"></span><span class="kpi-s" id="k-y1-s"></span>
+          <div class="kbar two" aria-hidden="true"><div class="kbar-fill" id="kb-y1a"></div><div class="kbar-fill dark" id="kb-y1b"></div></div>
+        </div>
+        <div class="kpi">
+          <span class="kpi-l">B's return</span><span class="kpi-v" id="k-irr"></span><span class="kpi-s" id="k-irr-s"></span>
+          <div class="kbar" aria-hidden="true"><div class="kbar-fill dark" id="kb-irr"></div><div class="kbar-mark" id="km-irr"></div></div>
+        </div>
+        <div class="kpi">
+          <span class="kpi-l">Break-even rate</span><span class="kpi-v" id="k-be"></span><span class="kpi-s" id="k-be-s"></span>
+          <div class="kbar" aria-hidden="true"><div class="kbar-zone" id="kz-be"></div><div class="kbar-mark" id="km-be"></div></div>
+        </div>
+        <div class="kpi">
+          <span class="kpi-l">Solar share</span><span class="kpi-v" id="k-share"></span><span class="kpi-s" id="k-share-s"></span>
+          <div class="kbar" aria-hidden="true"><div class="kbar-fill" id="kb-share"></div></div>
+        </div>
+      </div>
+
+      <!-- Row 2: money over time -->
+      <div class="row r2">
+        <div class="panel">
+          <h2 class="pill">Value built year by year (€M)</h2>
+          <div class="chart-tools">
+            <span class="tool-l" id="t-value"></span>
+            <div class="seg" role="group" aria-label="Value view">
+              <button class="seg-b on" data-view="pv" aria-pressed="true">Discounted</button><button class="seg-b" data-view="cash" aria-pressed="false">Cash</button>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="c-value" aria-label="Yearly savings bars and cumulative value lines for each option" role="img"></canvas></div>
+        </div>
+        <div class="panel">
+          <h2 class="pill">Where A's edge comes from</h2>
+          <div class="chart-wrap"><canvas id="c-wf" aria-label="Waterfall from B's capital to A's net edge" role="img"></canvas></div>
+          <p class="note" id="n-wf"></p>
+        </div>
+        <div class="panel">
+          <h2 class="pill">Price per kWh and Year 1 bill</h2>
+          <div class="chart-wrap"><canvas id="c-price" aria-label="Grid price, Option A tariff and Option B cost by year" role="img"></canvas></div>
+          <div class="bills" id="bills" aria-label="Year 1 site electricity bill split into grid and solar parts"></div>
+        </div>
+        <div class="panel">
+          <h2 class="pill">Cost per solar kWh</h2>
+          <div class="chart-wrap"><canvas id="c-lev" aria-label="Cost per solar kWh split into energy and capital" role="img"></canvas></div>
+          <p class="note" id="n-lev"></p>
+        </div>
+      </div>
+
+      <!-- Row 3: robustness and decision -->
+      <div class="row r3">
+        <div class="panel">
+          <h2 class="pill">Stress test: A's edge, €K a year</h2>
+          <div class="heat-wrap"><table class="heat" id="heat" aria-label="Yearly edge of Option A over Option B by discount rate and solar output"></table></div>
+          <p class="note" id="n-heat"></p>
+        </div>
+        <div class="panel">
+          <h2 class="pill">What flips the winner</h2>
+          <p class="tip-head" id="tip-head"></p>
+          <div class="tips" id="tips"></div>
+        </div>
+        <div class="panel">
+          <h2 class="pill">Scorecard (edit weights)</h2>
+          <div class="score-wrap"><table class="score" id="score"></table></div>
+        </div>
+        <div class="panel verdict" id="verdict">
+          <h2 class="pill">Our recommendation</h2>
+          <div class="verdict-body">
+            <p class="v-main" id="v-main"></p>
+            <p class="v-why" id="v-why"></p>
+            <div class="v-bars" aria-label="Risk-adjusted score and yearly value of each option">
+              <div class="vb-row"><span class="vb-l">A</span><div class="vb-track"><div class="vb-fill a" id="vb-a"></div></div><span class="vb-v" id="vb-a-v"></span><span class="vb-m" id="vm-a"></span></div>
+              <div class="vb-row"><span class="vb-l">B</span><div class="vb-track"><div class="vb-fill b" id="vb-b"></div></div><span class="vb-v" id="vb-b-v"></span><span class="vb-m" id="vm-b"></span></div>
+            </div>
+            <div class="needs"><p class="needs-h" id="needs-h"></p><ul id="needs"></ul></div>
+            <div class="v-facts">
+              <div><span class="vf-v" id="vf-bond"></span><span class="vf-l">Bond, 12 months</span></div>
+              <div><span class="vf-v" id="vf-rev"></span><span class="vf-l">Provider revenue</span></div>
+              <div><span class="vf-v" id="vf-tariff"></span><span class="vf-l">Final tariff vs grid</span></div>
+              <div><span class="vf-v" id="vf-cap"></span><span class="vf-l">Capital kept free</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>Source: case data and team analysis. Figures in EUR and illustrative, as stated in the case. Grid power for the non-solar share is the same in both options.</span>
+    <span id="toast" role="status" aria-live="polite"></span>
+  </footer>
+
+  <script src="/vendor/chart.umd.js"></script>
+  <script src="/model.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

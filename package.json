@@ -1,0 +1,20 @@
+{
+  "name": "solar-investment-dashboard",
+  "version": "1.0.0",
+  "description": "Live decision dashboard: Solar Energy as a Service vs CapEx ownership for an FMCG manufacturing site",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/model.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "chart.js": "4.4.1",
+    "compression": "1.7.4",
+    "express": "4.19.2"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}
